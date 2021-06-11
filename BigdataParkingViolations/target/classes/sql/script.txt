@@ -1,0 +1,154 @@
+CREATE TABLE public."StreetInformationtemp"(
+                    "Code1" integer,
+                    "Code2" integer,
+                    "Code3" integer,
+                    "Name" character varying(255));
+           
+CREATE TABLE public."StreetInformation" (
+                      "Id" serial NOT NULL,
+                        "Code1" integer,
+                        "Code2" integer,
+                        "Code3" integer,
+                       "Name" character varying(255),
+                        CONSTRAINT "StreetInformation_pkey" PRIMARY KEY ("Id"));
+
+CREATE TABLE public."Vehicletemp"(
+                        "PlateNumber" character varying  NOT NULL,
+                        "BodyType" character varying ,
+                        "PlateType" character varying ,
+                        "VehicleMake" character varying,
+                        "ExpireDate" character varying ,
+                        "VehicleColor" character varying ,
+                        "UnregisteredVehicle" character varying ,
+                        "VehicleYear" character varying);
+
+CREATE TABLE public."Vehicle"(
+                        "PlateNumber" character varying ,
+                        "BodyType" character varying ,
+                        "PlateType" character varying ,
+                        "VehicleMake" character varying,
+                        "ExpireDate" character varying ,
+                        "VehicleColor" character varying,
+                        "UnregisteredVehicle" character varying ,
+                        "VehicleYear" character varying ,
+                        CONSTRAINT "Vehicle_pkey" PRIMARY KEY ("PlateNumber"));
+
+COPY PUBLIC."Vehicletemp" FROM 'C:\\temp\VehicleData.csv' DELIMITER E',' QUOTE '|' CSV HEADER  NULL AS 'NULL';
+
+INSERT INTO public."Vehicle"
+                    Select DISTINCT * FROM public."Vehicletemp"
+                    ON CONFLICT DO NOTHING;
+
+CREATE TABLE public."Policetemp"(
+                        "Code" integer NOT NULL,
+                        "Command" character varying(255),
+                        "Squad" character varying(255),
+                        "Precint" integer,
+                        "Agency" character varying(255));
+
+COPY PUBLIC."Policetemp" FROM 'C:\\temp\PoliceData.csv' DELIMITER E',' QUOTE '|' CSV HEADER  NULL AS 'NULL';
+
+CREATE TABLE public."Police"(
+                        "Code" integer NOT NULL,
+                        "Command" character varying(255),
+                        "Squad" character varying(255),
+                        "Precint" integer,
+                        "Agency" character varying(255),
+                        CONSTRAINT "Police_pkey" PRIMARY KEY ("Code"));
+
+INSERT INTO public."Police"("Code", "Command", "Squad", "Precint", "Agency")
+                    SELECT DISTINCT * FROM public."Policetemp" ON CONFLICT DO NOTHING;
+
+
+COPY public."StreetInformationtemp" FROM 'C:\\temp\StreetData.csv' DELIMITER E',' QUOTE '|' CSV HEADER  NULL AS 'NULL';
+
+
+INSERT INTO public."StreetInformation"("Code1", "Code2", "Code3", "Name")
+Select DISTINCT * from public."StreetInformationtemp";
+
+
+CREATE TABLE public."ViolationCode"(
+                        id integer NOT NULL,
+                        "Description" character varying,
+                    temp1 integer,
+                    temp2 integer,
+                    CONSTRAINT "ViolationCode_pkey" PRIMARY KEY (id));
+
+
+COPY Public."ViolationCode" FROM 'C:\\temp\DOF_Parking_Violation_Codes.csv' DELIMITER E',' QUOTE E'"' CSV HEADER NULL AS 'NULL';
+
+ALTER TABLE public."ViolationCode" DROP COLUMN temp1;
+ALTER TABLE public."ViolationCode" DROP COLUMN temp2;
+
+
+CREATE TABLE public.parkingviolationtemp(
+                        summonId bigint,
+                        plateId character varying(100),
+                        ViolationCode integer,
+                       "Code1" integer,
+                        "Code2" integer,
+                        "Code3" integer,
+                        "Name" character varying(255) ,
+                        location character varying(100),
+                        precinct integer,
+                        "time" character varying(100) ,
+                        county character varying(100) ,
+                        issuercode integer,
+                        feetfromcurb integer,
+                        intersectingstreet character varying(100),
+                        datefirstobserved character varying(100) ,
+                        timefirstobserverd character varying(100) ,
+                        housenumber character varying(100));
+
+
+COPY ParkingViolationtemp FROM 'C:\\temp\TicketData.csv' DELIMITER E'\t' QUOTE E'\b' CSV HEADER NULL AS 'NULL';
+
+
+
+
+CREATE TABLE public."ParkingViolation"(
+                        summonid bigint NOT NULL,
+                        plateid character varying(100) COLLATE pg_catalog."default",
+                        violationcode integer,
+                        streetid integer,
+                        location character varying(100) COLLATE pg_catalog."default",
+                        precinct integer,
+                        "time" character varying(100) COLLATE pg_catalog."default",
+                        county character varying(100) COLLATE pg_catalog."default",
+                        issuerid integer,
+                        feetfromcurb integer,
+                        intersectingstreet character varying(100) COLLATE pg_catalog."default",
+                        datefirstobserved character varying(100) COLLATE pg_catalog."default",
+                        timefirstobserverd character varying(100) COLLATE pg_catalog."default",
+                        housenumber character varying(100) COLLATE pg_catalog."default",
+                        CONSTRAINT "ParkingViolation_pkey" PRIMARY KEY (summonid),
+                        CONSTRAINT "Police_fkey" FOREIGN KEY (issuerid)
+                            REFERENCES public."Police" ("Code") MATCH SIMPLE
+                            ON UPDATE NO ACTION
+                            ON DELETE NO ACTION
+                            NOT VALID,
+                        CONSTRAINT "Street_fkey" FOREIGN KEY (streetid)''
+                            REFERENCES public."StreetInformation" ("Id") MATCH SIMPLE
+                            ON UPDATE NO ACTION
+                            ON DELETE NO ACTION
+                            NOT VALID,
+                        CONSTRAINT "Vehicle_fkey" FOREIGN KEY (plateid)
+                            REFERENCES public."Vehicle" ("PlateNumber") MATCH SIMPLE
+                            ON UPDATE NO ACTION
+                            ON DELETE NO ACTION
+                            NOT VALID,
+                        CONSTRAINT "Violation_fkey" FOREIGN KEY (violationcode)
+                            REFERENCES public."ViolationCode" (id) MATCH SIMPLE
+                            ON UPDATE NO ACTION
+                            ON DELETE NO ACTION
+                            NOT VALID);
+
+
+INSERT INTO public."ParkingViolation"
+                    SELECT DISTINCT summonId, plateid, violationcode,"Id", location, precinct, "time", county, issuercode, feetfromcurb, intersectingstreet, datefirstobserved, timefirstobserverd, housenumber
+                    FROM public.parkingviolationtemp a,public."StreetInformation" b
+                    where a."Code1"=b."Code1"
+                    and a."Code2"=b."Code2"
+                    and a."Code3"=b."Code3"
+                    and a."Name"=b."Name"
+                    ON CONFLICT DO NOTHING;

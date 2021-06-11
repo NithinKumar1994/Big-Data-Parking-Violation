@@ -1,0 +1,3 @@
+bigdata\loadDataMongo.class
+bigdata\LoadDataPostgres.class
+bigdata\ItemsetMining.class
